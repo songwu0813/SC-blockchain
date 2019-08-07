@@ -861,11 +861,8 @@ func (s *service) updateUser(w http.ResponseWriter, r *http.Request) {
 func (s *service) newPost(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("new post called")
 	r.ParseMultipartForm(32 << 20)
-	file, _, err := r.FormFile("file")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	formData := r.MultipartForm
+	files := formData.File["file"]
 
 	tag := r.FormValue("tag")
 	title := r.FormValue("title")
@@ -873,7 +870,6 @@ func (s *service) newPost(w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("name")
 	factory := r.FormValue("factory")
 	market := r.FormValue("market")
-	fmt.Println(r.FormValue("amount"))
 	amount, err := strconv.Atoi(r.FormValue("amount"))
 	if err != nil {
 		log.Println(err)
@@ -882,17 +878,31 @@ func (s *service) newPost(w http.ResponseWriter, r *http.Request) {
 	}
 	progress := r.FormValue("progress")
 
-	defer file.Close()
-	f, err := os.OpenFile("file/"+tag+".pdf", os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		fmt.Println(err)
-		return
+	path := "file/"+tag+"/"
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+	    os.Mkdir(path, 0777)
+	}
+	for k, _ := range files {
+		file, err := files[k].Open()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer file.Close()
+		p := path + files[k].Filename
+		fmt.Println(p)
+		f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE, 0666)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		io.Copy(f, file)
+		f.Close()
 	}
 
-	io.Copy(f, file)
-	f.Close()
 
-	filename := "http://34.201.129.123:8000/file/" + tag + ".pdf"
+
+	filename := "http://34.201.129.123:8000/" + path
 
 	_id := primitive.NewObjectID()
 	_date := time.Now().Add(time.Hour*8).Format(time.ANSIC)
