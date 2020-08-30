@@ -1,2 +1,2 @@
-# agri-blockchain
-Agriculture blockchain project
+# SC-blockchain
+A backend for supply chain interacted with blockchain
